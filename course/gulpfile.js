@@ -5,7 +5,6 @@ const uglify = require('gulp-uglify');
 const imagemin = require('gulp-imagemin');
 const pngquant = require('imagemin-pngquant');
 const htmlmin = require('gulp-htmlmin');
-const gls = require('gulp-live-server');
 const browserSync = require('browser-sync').create();
 
 
@@ -14,15 +13,20 @@ gulp.task('sass', function () {
         .pipe(concat('style.min.css'))
         .pipe(sass({outputStyle: 'compressed'}).on('error', sass.logError))
         .pipe(gulp.dest('assets/css'))
-        .pipe(browserSync.stream());
+        .pipe(browserSync.stream())
 });
 
 gulp.task('js', function () {
     return gulp.src('assets/src/js/**/*.js')
-        .pipe(browserify())
         .pipe(concat('script.min.js'))
+        .pipe(browserify())
         .pipe(uglify())
         .pipe(gulp.dest('assets/js'));
+});
+
+gulp.task('js-watch', ['assets/js'], function (done) {
+    browserSync.reload();
+    done();
 });
 
 gulp.task('image', function () {
@@ -41,33 +45,15 @@ gulp.task('htmlmin', function () {
         .pipe(gulp.dest('.'))
 });
 
-gulp.task('js-watch', ['js'], function (done) {
-    browserSync.reload();
-    done();
-});
-
-gulp.task('default', ['js'], function () {
+gulp.task('serve', gulp.parallel ('sass', 'js', 'htmlmin', 'image',function() {
     browserSync.init({
-        server: {
-            baseDir: "./"
-        }
+        server: "./"
     });
-    gulp.watch('assets/src/js/**/*.js', gulp.series('js'));
-});
 
-gulp.task('serve', ['sass'], function () {
-    browserSync.init({
-        server: './'
-    });
-    gulp.watch('assets/src/sass/**/*.scss', gulp.series('sass'));
-    gulp.watch('/.html').on('change', browserSync.reload);
+    gulp.watch("assets/src/sass/**/*.scss", gulp.parallel('sass'));
+    gulp.watch('assets/src/img/*', gulp.parallel('image')).on('change', browserSync.reload);
+    gulp.watch('_html/**/*.html',gulp.parallel('htmlmin')).on('change', browserSync.reload);
 
+}));
 
-    gulp.watch('assets/src/img/*', gulp.series('image').on('change', browserSync.reload));
-    gulp.watch('/.html').on('change', browserSync.reload);
-
-    gulp.watch('_html/**/*.html', gulp.series('htmlmin').on('change', browserSync.reload));
-    gulp.watch('/.html').on('change', browserSync.reload);
-});
-
-gulp.task('default', gulp.parallel('sass', 'js', 'htmlmin', 'image', 'watch', 'js-watch', 'serve'));
+gulp.task('default', gulp.parallel ('sass', 'js', 'htmlmin', 'image'));
